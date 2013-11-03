@@ -1,0 +1,131 @@
+<html>
+<head>
+<title>grouper</title>
+<link rel="stylesheet" type="text/css" href="/static/utils.css">
+<style>
+
+body {
+    margin: 10px;
+}
+table {
+    border-collapse: collapse;
+}
+th, td {
+    padding: 0px;
+}
+
+</style>
+</head>
+<body>
+<script src="//code.jquery.com/jquery-2.0.3.min.js"></script>
+<script src="/gl519/jquery.cookie.js"></script>
+<script src="/gl519/index.js"></script>
+<script src="/static/utils.js"></script>
+<script>
+
+function drawCenteredImage(src, size) {
+	return center($('<img style="max-width:' + size + 'px;max-height:' + size + 'px"/>').attr('src', src)).myCss('width:' + size + 'px;height:' + size + 'px')
+}
+
+function drawIBox(img, size) {
+	var d = $('<div/>')
+	d.append(drawCenteredImage(img, size))
+	d.setLeft = function (color) {
+		d.css('border-left', '3px solid ' + color)
+	}
+	d.setRight = function (color) {
+		d.css('border-right', '3px solid ' + color)
+	}
+	d.setLeft('white')
+	d.setRight('white')
+	return d
+}
+
+function drawSequence(records, cuts) {
+	var size = 200
+	var clickRegionSize = 50
+
+	var xs = _.map(records, function (r) {
+		return drawIBox(r.small, size).myCss('float:left')
+	})
+
+	var cuts = cuts || {}
+	var cursor = null
+	function toggleCut(i) {
+		if (cuts[i]) delete cuts[i]
+		else cuts[i] = true
+	}
+	function updateCuts() {
+		_.each(xs, function (x, i) {
+			function getColor(i) {
+				if (cuts[i])
+					return cursor == i ? 'rgb(255,100,100)' : 'red'
+				else
+					return cursor == i ? 'lightgrey' : 'white'
+			}
+			x.setLeft(getColor(i))
+			x.setRight(getColor(i + 1))
+		})
+	}
+
+	_.each(xs, function (x, i) {
+		x.mouseout(function (e) {
+			cursor = null
+			updateCuts()
+		})
+		x.mousemove(function (e) {
+			var pos = vectorSub(getMousePos(e), vector(x.offset()))
+			if (pos.x < clickRegionSize) {
+				cursor = i
+			} else if (pos.x > size - clickRegionSize) {
+				cursor = i + 1
+			} else {
+				cursor = null
+			}
+			updateCuts()
+		})
+		x.click(function (e) {
+			var pos = vectorSub(getMousePos(e), vector(x.offset()))
+			if (pos.x < clickRegionSize) {
+				toggleCut(i)
+			} else if (pos.x > size - clickRegionSize) {
+				toggleCut(i + 1)
+			}
+			updateCuts()
+		})
+	})
+
+	var d = $('<div/>')
+	d.append(xs)
+	d.append($('<div style="clear:both"/>'))
+	d.append($('<div class="bluepill" style="margin-left:20px"/>').text('I marked the sequence breaks').click(function () {
+		rpc('submit', {
+			records : records,
+			cuts : cuts
+		}, function () {
+			if (isHIT())
+				mturkSubmit()
+			else
+				location.reload()
+		})
+	}))
+	return d
+}
+
+$(function () {
+	$('body').append(createThrobber())
+	if (_.getUrlParams().result != null) {
+		rpc('getResult', 1 * _.getUrlParams().result, function (r) {
+			$('body').empty().append(drawSequence(r.result.records, r.result.cuts))
+		})
+	} else {
+		rpc('grab', function (records) {
+			$('body').empty().append(drawSequence(records))
+			mturkCheckPreview()
+		})
+	}
+})
+
+</script>
+</body>
+</html>
