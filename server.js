@@ -16,6 +16,8 @@ _.run(function () {
 
     rpc.grab = function (arg, req) {
 
+        return "hi!?"
+
         return dbEval(db, function () {
             return 'hi: ' + db.records.find().count()
         })
