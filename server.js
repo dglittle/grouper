@@ -15,13 +15,6 @@ _.run(function () {
     var rpc = {}
 
     rpc.grab = function (arg, req) {
-
-        return "hi!?"
-
-        return dbEval(db, function () {
-            return 'hi: ' + db.records.find().count()
-        })
-
         return dbEval(db, function () {
             function getSequence(first, n) {
                 return db.records.find({
